@@ -34,6 +34,22 @@ const userPromptInput = $('user-prompt');
 const keywordsCountInput = $('keywords-count');
 const keywordsVal = $('keywords-val');
 
+// Delete project modal
+const deleteModalOverlay = $('delete-modal-overlay');
+const deleteProjectName = $('delete-project-name');
+const btnDeleteCancel = $('btn-delete-cancel');
+const btnDeleteConfirm = $('btn-delete-confirm');
+
+// Term detail modal
+const termModalOverlay = $('term-modal-overlay');
+const termModalTitle = $('term-modal-title');
+const termStats = $('term-stats');
+const termNeighbours = $('term-neighbours');
+const termPromptsDetails = $('term-prompts-details');
+const termPromptsCount = $('term-prompts-count');
+const termPromptsList = $('term-prompts-list');
+const btnTermModalClose = $('btn-term-modal-close');
+
 /* ===== Restore persisted settings ===== */
 if (state.apiKey) apiKeyInput.value = state.apiKey;
 
@@ -80,8 +96,18 @@ function renderProjects() {
     nameEl.className = 'project-name';
     nameEl.textContent = p.name;
 
+    const trashBtn = document.createElement('button');
+    trashBtn.className = 'project-delete-btn';
+    trashBtn.title = 'Delete project';
+    trashBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75ZM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15ZM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Z"/></svg>`;
+    trashBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmDeleteProject(p);
+    });
+
     header.appendChild(chevron);
     header.appendChild(nameEl);
+    header.appendChild(trashBtn);
     item.appendChild(header);
 
     // Generations list (hidden unless expanded)
@@ -177,19 +203,64 @@ btnModalCreate.addEventListener('click', async () => {
 newProjectName.addEventListener('keydown', e => { if (e.key === 'Enter') btnModalCreate.click(); });
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.style.display = 'none'; });
 
+/* ===== Delete project ===== */
+let pendingDeleteId = null;
+
+function confirmDeleteProject(p) {
+  pendingDeleteId = p.id;
+  deleteProjectName.textContent = p.name;
+  deleteModalOverlay.style.display = 'flex';
+}
+
+btnDeleteCancel.addEventListener('click', () => {
+  deleteModalOverlay.style.display = 'none';
+  pendingDeleteId = null;
+});
+
+deleteModalOverlay.addEventListener('click', e => {
+  if (e.target === deleteModalOverlay) {
+    deleteModalOverlay.style.display = 'none';
+    pendingDeleteId = null;
+  }
+});
+
+btnDeleteConfirm.addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  const id = pendingDeleteId;
+  deleteModalOverlay.style.display = 'none';
+  pendingDeleteId = null;
+  try {
+    await api('DELETE', `/api/projects/${id}`);
+    state.projects = state.projects.filter(p => p.id !== id);
+    if (state.activeProjectId === id) {
+      state.activeProjectId = null;
+      activeProjectBadge.style.display = 'none';
+      generateStatus.textContent = '';
+      updateGenerateButton();
+    }
+    state.expandedProjects.delete(id);
+    renderProjects();
+    await loadGraph();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+});
+
 /* ===== Right panel controls ===== */
-apiKeyInput.addEventListener('input', () => {
+function onApiKeyChange() {
   state.apiKey = apiKeyInput.value.trim();
   localStorage.setItem('bop_api_key', state.apiKey);
   updateGenerateButton();
-});
+}
+apiKeyInput.addEventListener('input', onApiKeyChange);
+apiKeyInput.addEventListener('change', onApiKeyChange);
 
 maxTokensInput.addEventListener('input', () => { maxTokensVal.textContent = maxTokensInput.value; });
 temperatureInput.addEventListener('input', () => { tempVal.textContent = parseFloat(temperatureInput.value).toFixed(2); });
 keywordsCountInput.addEventListener('input', () => { keywordsVal.textContent = keywordsCountInput.value; });
 
 function updateGenerateButton() {
-  btnGenerate.disabled = !state.apiKey || !state.activeProjectId;
+  btnGenerate.disabled = !apiKeyInput.value.trim() || !state.activeProjectId;
 }
 
 /* ===== Search ===== */
@@ -221,7 +292,7 @@ btnGenerate.addEventListener('click', async () => {
     const result = await api('POST', '/api/generate', {
       prompt,
       projectId: state.activeProjectId,
-      apiKey: state.apiKey,
+      apiKey: apiKeyInput.value.trim(),
       model: modelSelect.value,
       maxTokens: parseInt(maxTokensInput.value),
       temperature: parseFloat(temperatureInput.value),
@@ -268,6 +339,68 @@ async function loadGraph() {
   } catch (e) {
     console.error('Graph load error', e);
   }
+}
+
+/* ===== Term detail modal ===== */
+btnTermModalClose.addEventListener('click', () => { termModalOverlay.style.display = 'none'; });
+termModalOverlay.addEventListener('click', e => { if (e.target === termModalOverlay) termModalOverlay.style.display = 'none'; });
+
+async function showTermModal(d) {
+  // Reset and show loading state
+  termModalTitle.textContent = d.text;
+  termStats.innerHTML = '<div class="term-modal-loading">Loading…</div>';
+  termNeighbours.innerHTML = '';
+  termPromptsList.innerHTML = '';
+  termPromptsDetails.open = false;
+  termModalOverlay.style.display = 'flex';
+
+  try {
+    const params = new URLSearchParams();
+    if (state.activeProjectId) params.set('projectId', state.activeProjectId);
+    const data = await api('GET', `/api/terms/${d.id}?${params}`);
+
+    // Stats grid
+    termStats.innerHTML = `
+      <div class="term-stat-card">
+        <div class="term-stat-value">${data.freq}</div>
+        <div class="term-stat-label">Generations</div>
+      </div>
+      <div class="term-stat-card">
+        <div class="term-stat-value">${data.degree}</div>
+        <div class="term-stat-label">Degree</div>
+      </div>
+      <div class="term-stat-card">
+        <div class="term-stat-value">${(data.total_weight || 0).toFixed(1)}</div>
+        <div class="term-stat-label">Total Weight</div>
+      </div>`;
+
+    // Neighbours
+    if (data.neighbours.length === 0) {
+      termNeighbours.innerHTML = '<span class="f6 color-fg-muted">No co-occurring terms.</span>';
+    } else {
+      termNeighbours.innerHTML = data.neighbours.map(n =>
+        `<span class="neighbour-chip">${escHtml(n.text)}<span class="chip-weight">${n.weight}</span></span>`
+      ).join('');
+    }
+
+    // Prompts
+    termPromptsCount.textContent = data.prompts.length;
+    if (data.prompts.length === 0) {
+      termPromptsList.innerHTML = '<div class="prompt-row color-fg-muted">No prompts found.</div>';
+    } else {
+      termPromptsList.innerHTML = data.prompts.map(p => `
+        <div class="prompt-row">
+          <div class="color-fg-default">${escHtml(p.prompt)}</div>
+          <div class="prompt-meta">${p.model} &middot; ${new Date(p.created_at).toLocaleString()}</div>
+        </div>`).join('');
+    }
+  } catch (e) {
+    termStats.innerHTML = `<div class="term-modal-loading color-fg-danger">Error: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ===== D3 Network ===== */
@@ -317,6 +450,9 @@ function renderGraph({ nodes, links }) {
     .attr('class', 'link')
     .attr('stroke-width', d => Math.max(0.5, Math.log(d.weight + 1)));
 
+  // Track whether a drag actually moved so we can distinguish click vs drag
+  let nodeDragMoved = false;
+
   // Nodes
   const nodeGroup = g.append('g').attr('class', 'nodes')
     .selectAll('g')
@@ -324,8 +460,8 @@ function renderGraph({ nodes, links }) {
     .enter().append('g')
     .attr('class', 'node')
     .call(d3.drag()
-      .on('start', dragstarted)
-      .on('drag', dragged)
+      .on('start', (event, d) => { nodeDragMoved = false; dragstarted(event, d); })
+      .on('drag', (event, d) => { nodeDragMoved = true; dragged(event, d); })
       .on('end', dragended));
 
   nodeGroup.append('circle')
@@ -343,7 +479,12 @@ function renderGraph({ nodes, links }) {
       tt.style.left = (event.clientX - rect.left + 12) + 'px';
       tt.style.top = (event.clientY - rect.top - 28) + 'px';
     })
-    .on('mouseout', () => { $('tooltip').style.display = 'none'; });
+    .on('mouseout', () => { $('tooltip').style.display = 'none'; })
+    .on('click', (event, d) => {
+      if (nodeDragMoved) return;
+      $('tooltip').style.display = 'none';
+      showTermModal(d);
+    });
 
   nodeGroup.append('text')
     .attr('dy', d => rScale(d.freq) + 11)

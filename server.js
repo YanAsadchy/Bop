@@ -157,25 +157,33 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// Graph data for visualization
+// Graph data for visualization — edges derived from MENTIONS to stay project-scoped
 app.get('/api/graph', async (req, res) => {
   try {
     const { projectId, search } = req.query;
-
-    let termFilter = '';
-    if (search && search.trim()) {
-      const s = search.trim().toLowerCase().replace(/'/g, "\\'");
-      termFilter = `WHERE toLower(t.text) CONTAINS '${s}'`;
-    }
+    const searchClause = search && search.trim()
+      ? `AND toLower(t.text) CONTAINS '${search.trim().toLowerCase().replace(/'/g, "\\'")}'`
+      : '';
 
     let nodeQuery, edgeQuery;
 
     if (projectId) {
-      nodeQuery = `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(t:Term) WHERE p.id = ${projectId} ${search ? `AND toLower(t.text) CONTAINS '${search.trim().toLowerCase().replace(/'/g, "\\'")}'` : ''} RETURN DISTINCT t.id AS id, t.text AS text, count(g) AS freq`;
-      edgeQuery = `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(a:Term), (g)-[:MENTIONS]->(b:Term), (a)-[r:CO_OCCURS]->(b) WHERE p.id = ${projectId} RETURN DISTINCT a.id AS source, b.id AS target, r.weight AS weight`;
+      // Nodes: terms mentioned in this project's generations
+      nodeQuery = `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(t:Term)
+        WHERE p.id = ${projectId} ${searchClause}
+        RETURN DISTINCT t.id AS id, t.text AS text, count(g) AS freq`;
+      // Edges: co-occurrence derived inline, scoped to this project only
+      edgeQuery = `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(a:Term),
+          (g)-[:MENTIONS]->(b:Term)
+        WHERE p.id = ${projectId} AND a.id < b.id
+        RETURN a.id AS source, b.id AS target, count(g) AS weight`;
     } else {
-      nodeQuery = `MATCH (t:Term) ${termFilter} RETURN t.id AS id, t.text AS text, 1 AS freq`;
-      edgeQuery = `MATCH (a:Term)-[r:CO_OCCURS]->(b:Term) RETURN a.id AS source, b.id AS target, r.weight AS weight LIMIT 200`;
+      nodeQuery = search && search.trim()
+        ? `MATCH (t:Term) WHERE toLower(t.text) CONTAINS '${search.trim().toLowerCase().replace(/'/g, "\\'")}' RETURN t.id AS id, t.text AS text, 1 AS freq`
+        : `MATCH (t:Term) RETURN t.id AS id, t.text AS text, 1 AS freq LIMIT 200`;
+      edgeQuery = `MATCH (g:Generation)-[:MENTIONS]->(a:Term), (g)-[:MENTIONS]->(b:Term)
+        WHERE a.id < b.id
+        RETURN a.id AS source, b.id AS target, count(g) AS weight LIMIT 300`;
     }
 
     const nRes = await conn.query(nodeQuery);
@@ -187,6 +195,70 @@ app.get('/api/graph', async (req, res) => {
       nodes: nodes.map(n => ({ id: n.id, text: n.text, freq: n.freq })),
       links: edges.map(e => ({ source: e.source, target: e.target, weight: e.weight }))
     });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Term detail: stats + neighbours + prompts, scoped to a project
+app.get('/api/terms/:termId', async (req, res) => {
+  try {
+    const termId = parseInt(req.params.termId);
+    const projectId = req.query.projectId ? parseInt(req.query.projectId) : null;
+
+    const scopeMatch = projectId
+      ? `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[m:MENTIONS]->(t:Term) WHERE t.id = ${termId} AND p.id = ${projectId}`
+      : `MATCH (g:Generation)-[m:MENTIONS]->(t:Term) WHERE t.id = ${termId}`;
+
+    // Basic stats
+    const statsRes = await conn.query(`${scopeMatch} RETURN t.text AS text, count(DISTINCT g) AS freq, sum(m.weight) AS total_weight`);
+    const statsRows = await statsRes.getAll();
+    if (!statsRows.length) return res.status(404).json({ error: 'Term not found' });
+    const { text, freq, total_weight } = statsRows[0];
+
+    // Neighbours (co-occurring terms in same project scope)
+    const nbScopeMatch = projectId
+      ? `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(t:Term), (g)-[:MENTIONS]->(other:Term) WHERE t.id = ${termId} AND p.id = ${projectId} AND other.id <> ${termId}`
+      : `MATCH (g:Generation)-[:MENTIONS]->(t:Term), (g)-[:MENTIONS]->(other:Term) WHERE t.id = ${termId} AND other.id <> ${termId}`;
+    const nbRes = await conn.query(`${nbScopeMatch} RETURN other.id AS id, other.text AS text, count(g) AS weight ORDER BY weight DESC LIMIT 20`);
+    const neighbours = await nbRes.getAll();
+
+    // Prompts where this term appears
+    const promptScopeMatch = projectId
+      ? `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[:MENTIONS]->(t:Term) WHERE t.id = ${termId} AND p.id = ${projectId}`
+      : `MATCH (g:Generation)-[:MENTIONS]->(t:Term) WHERE t.id = ${termId}`;
+    const pRes = await conn.query(`${promptScopeMatch} RETURN g.id AS id, g.prompt AS prompt, g.created_at AS created_at, g.model AS model ORDER BY g.created_at DESC`);
+    const prompts = await pRes.getAll();
+
+    res.json({
+      id: termId,
+      text,
+      freq,
+      total_weight,
+      degree: neighbours.length,
+      neighbours: neighbours.map(n => ({ id: n.id, text: n.text, weight: n.weight })),
+      prompts: prompts.map(p => ({ id: p.id, prompt: p.prompt, created_at: p.created_at, model: p.model }))
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Delete project and all its generations
+app.delete('/api/projects/:projectId', async (req, res) => {
+  try {
+    const pid = parseInt(req.params.projectId);
+    // Delete MENTIONS edges from this project's generations
+    await conn.query(`MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[m:MENTIONS]->(:Term) WHERE p.id = ${pid} DELETE m`);
+    // Delete HAS_GENERATION edges
+    await conn.query(`MATCH (p:Project)-[r:HAS_GENERATION]->(g:Generation) WHERE p.id = ${pid} DELETE r`);
+    // Delete Generation nodes
+    await conn.query(`MATCH (g:Generation) WHERE g.project_id = ${pid} DELETE g`);
+    // Delete Project node
+    await conn.query(`MATCH (p:Project) WHERE p.id = ${pid} DELETE p`);
+    res.json({ ok: true });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });

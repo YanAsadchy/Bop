@@ -161,6 +161,52 @@
   </div>
 </div>
 
+<!-- Delete Project Confirmation -->
+<div id="delete-modal-overlay" class="modal-overlay" style="display:none">
+  <div class="Box Box--overlay color-bg-default rounded-3" style="width:360px">
+    <div class="Box-header">
+      <h3 class="Box-title color-fg-danger">Delete Project</h3>
+    </div>
+    <div class="Box-body">
+      <p class="color-fg-default mb-0">Delete <strong id="delete-project-name"></strong>? This will permanently remove the project and all its generations. Terms are kept in the global graph.</p>
+    </div>
+    <div class="Box-footer d-flex flex-justify-end gap-2">
+      <button id="btn-delete-cancel" class="btn">Cancel</button>
+      <button id="btn-delete-confirm" class="btn btn-danger">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Term Detail Modal -->
+<div id="term-modal-overlay" class="modal-overlay" style="display:none">
+  <div class="Box Box--overlay color-bg-default rounded-3 term-modal-box">
+    <div class="Box-header d-flex flex-items-center flex-justify-between">
+      <h3 class="Box-title" id="term-modal-title"></h3>
+      <button id="btn-term-modal-close" class="btn-octicon" aria-label="Close">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+      </button>
+    </div>
+    <div class="Box-body term-modal-body">
+      <!-- Network stats -->
+      <div class="term-stats-grid mb-3" id="term-stats"></div>
+
+      <!-- Neighbours -->
+      <div class="mb-3">
+        <p class="f6 text-bold color-fg-default mb-1">Co-occurring Terms</p>
+        <div id="term-neighbours" class="term-neighbours"></div>
+      </div>
+
+      <!-- Prompts accordion -->
+      <details id="term-prompts-details" class="term-prompts-details">
+        <summary class="f6 text-bold color-fg-default cursor-pointer py-1">
+          Prompts containing this term <span id="term-prompts-count" class="Label Label--secondary ml-1"></span>
+        </summary>
+        <div id="term-prompts-list" class="term-prompts-list mt-2"></div>
+      </details>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
