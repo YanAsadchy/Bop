@@ -83,14 +83,9 @@ function renderProjects() {
     header.className = 'project-item-header' + (state.activeProjectId === p.id ? ' active' : '');
     header.dataset.id = p.id;
 
-    const chevron = document.createElement('svg');
-    chevron.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    chevron.setAttribute('viewBox', '0 0 16 16');
-    chevron.setAttribute('width', '12');
-    chevron.setAttribute('height', '12');
-    chevron.setAttribute('fill', 'currentColor');
-    chevron.className = 'project-chevron octicon' + (state.expandedProjects.has(p.id) ? ' open' : '');
-    chevron.innerHTML = '<path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/>';
+    const chevron = document.createElement('span');
+    chevron.className = 'material-symbols-outlined project-chevron' + (state.expandedProjects.has(p.id) ? ' open' : '');
+    chevron.textContent = 'chevron_right';
 
     const nameEl = document.createElement('span');
     nameEl.className = 'project-name';
@@ -99,7 +94,7 @@ function renderProjects() {
     const exportBtn = document.createElement('button');
     exportBtn.className = 'project-action-btn';
     exportBtn.title = 'Export project as CSV';
-    exportBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Zm-1-5.573 3.25 3.25a.75.75 0 0 0 1.06 0L9.31 8.427A.75.75 0 0 0 8.25 7.366H6.5V2.75a.75.75 0 0 0-1.5 0v4.616H3.25a.75.75 0 0 0-.53 1.28l-.97-.22Z"/></svg>`;
+    exportBtn.innerHTML = `<span class="material-symbols-outlined">download</span>`;
     exportBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       window.location.href = `/api/projects/${p.id}/export`;
@@ -108,7 +103,7 @@ function renderProjects() {
     const trashBtn = document.createElement('button');
     trashBtn.className = 'project-action-btn project-delete-btn';
     trashBtn.title = 'Delete project';
-    trashBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="13" height="13" fill="currentColor"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75ZM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15ZM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Z"/></svg>`;
+    trashBtn.innerHTML = `<span class="material-symbols-outlined">delete</span>`;
     trashBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       confirmDeleteProject(p);

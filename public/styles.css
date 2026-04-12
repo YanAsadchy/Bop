@@ -1,3 +1,65 @@
+/* ===== Material Symbols base ===== */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* Smaller icon inside buttons */
+.btn-icon {
+  font-size: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+}
+
+/* Icon-only button (clear search, close modal) */
+.btn-icon-only {
+  padding: 3px 5px;
+  line-height: 1;
+}
+.btn-icon-only .material-symbols-outlined {
+  font-size: 16px;
+  display: block;
+  margin: 0;
+}
+
+/* Search field icon */
+.search-input-padded {
+  padding-left: 32px !important;
+}
+.search-field-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: var(--fgColor-muted, #636e7b);
+  pointer-events: none;
+}
+
+/* Network placeholder icon */
+.placeholder-icon {
+  font-size: 52px;
+  opacity: 0.25;
+  display: block;
+  margin: 0 auto;
+  font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 48;
+}
+
 /* ===== Layout ===== */
 html, body {
   height: 100%;
@@ -66,6 +128,7 @@ html, body {
 
 .project-chevron {
   flex-shrink: 0;
+  font-size: 16px;
   transition: transform 0.15s;
   color: var(--fgColor-muted, #636e7b);
 }
@@ -225,13 +288,18 @@ input[type="range"] {
 .project-action-btn {
   flex-shrink: 0;
   display: none;
-  padding: 2px 4px;
+  padding: 2px 3px;
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: 4px;
   color: var(--fgColor-muted, #636e7b);
   line-height: 1;
+}
+.project-action-btn .material-symbols-outlined {
+  font-size: 15px;
+  display: block;
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
 }
 .project-action-btn:hover {
   color: var(--fgColor-accent, #0969da);
