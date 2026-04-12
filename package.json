@@ -1,0 +1,17 @@
+{
+  "name": "bop",
+  "version": "1.0.0",
+  "description": "Network visualization of LLM responses with KuzuDB",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "express": "^4.18.2",
+    "kuzu": "^0.8.2",
+    "natural": "^8.0.1",
+    "stopword": "^3.0.1"
+  }
+}

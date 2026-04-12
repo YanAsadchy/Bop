@@ -1,0 +1,222 @@
+/* ===== Layout ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Columns ===== */
+.col-left {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.col-middle {
+  overflow: hidden;
+}
+
+.col-right {
+  overflow: hidden;
+}
+
+.col-header {
+  flex-shrink: 0;
+}
+
+/* ===== Project list ===== */
+.project-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.project-item {
+  border-radius: 6px;
+  margin-bottom: 2px;
+  overflow: hidden;
+}
+
+.project-item-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  user-select: none;
+  gap: 6px;
+}
+
+.project-item-header:hover {
+  background: var(--bgColor-neutral-muted, #f6f8fa);
+}
+
+.project-item-header.active {
+  background: var(--bgColor-accent-muted, #ddf4ff);
+  color: var(--fgColor-accent, #0969da);
+}
+
+.project-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  color: var(--fgColor-muted, #636e7b);
+}
+
+.project-chevron.open {
+  transform: rotate(90deg);
+}
+
+.project-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.generation-list {
+  padding-left: 28px;
+  padding-bottom: 4px;
+}
+
+.generation-item {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fgColor-muted, #636e7b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.generation-item:hover {
+  background: var(--bgColor-neutral-muted, #f6f8fa);
+  color: var(--fgColor-default, #1f2328);
+}
+
+/* ===== Search bar ===== */
+.search-bar {
+  flex-shrink: 0;
+}
+
+/* ===== Network ===== */
+#network-container {
+  flex: 1;
+  min-height: 0;
+  background: #fafbfc;
+}
+
+#network-svg {
+  display: block;
+}
+
+.network-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* D3 nodes */
+.node circle {
+  stroke-width: 1.5px;
+  cursor: pointer;
+  transition: r 0.2s;
+}
+
+.node text {
+  font-size: 11px;
+  pointer-events: none;
+  fill: var(--fgColor-default, #1f2328);
+}
+
+.link {
+  stroke: var(--borderColor-default, #d0d7de);
+  stroke-opacity: 0.6;
+}
+
+.node circle.highlighted {
+  stroke: var(--fgColor-accent, #0969da);
+  stroke-width: 2.5px;
+}
+
+/* ===== Tooltip ===== */
+.tooltip-box {
+  position: absolute;
+  pointer-events: none;
+  font-size: 12px;
+  z-index: 10;
+  max-width: 200px;
+  box-shadow: var(--shadow-medium, 0 3px 6px rgba(140,149,159,.15));
+}
+
+/* ===== Generate bar ===== */
+.generate-bar {
+  flex-shrink: 0;
+}
+
+/* ===== Right column scrollable body ===== */
+.response-preview {
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(27,31,36,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* ===== Misc ===== */
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+/* Loading spinner on generate button */
+.btn-loading::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+input[type="range"] {
+  accent-color: var(--fgColor-accent, #0969da);
+}
+
+.flash-success {
+  animation: flash-green 0.5s ease;
+}
+@keyframes flash-green {
+  0% { background: var(--bgColor-success-muted, #dafbe1); }
+  100% { background: transparent; }
+}

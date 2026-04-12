@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bop — Term Network Explorer</title>
+  <!-- GitHub Primer CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/@primer/css@21.3.1/dist/primer.css" />
+  <!-- D3.js -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="color-bg-default">
+
+<div class="app-shell">
+
+  <!-- ===== LEFT COLUMN: Projects ===== -->
+  <aside class="col-left color-bg-subtle border-right color-border-default">
+    <div class="col-header px-3 py-2 border-bottom color-border-default">
+      <span class="text-bold color-fg-default f5">Projects</span>
+    </div>
+    <div id="project-list" class="project-list px-2 py-2"></div>
+    <div class="px-3 py-2 border-top color-border-default">
+      <button id="btn-add-project" class="btn btn-sm btn-primary width-full">
+        <svg class="octicon mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/></svg>
+        New Project
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== MIDDLE COLUMN: Network ===== -->
+  <main class="col-middle d-flex flex-column">
+    <!-- Search bar -->
+    <div class="search-bar px-3 py-2 border-bottom color-border-default color-bg-subtle">
+      <div class="d-flex flex-items-center gap-2">
+        <div class="position-relative flex-1">
+          <input id="search-input" type="text" class="form-control input-sm width-full pl-5" placeholder="Search terms in network…" />
+          <svg class="octicon position-absolute" style="left:10px;top:50%;transform:translateY(-50%)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="var(--fgColor-muted)"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>
+        </div>
+        <button id="btn-clear-search" class="btn btn-sm color-fg-muted" title="Clear search">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.749.749 0 0 1 1.275.326.749.749 0 0 1-.215.734L9.06 8l3.22 3.22a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L8 9.06l-3.22 3.22a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Network canvas -->
+    <div id="network-container" class="flex-1 position-relative">
+      <svg id="network-svg" width="100%" height="100%"></svg>
+      <div id="network-placeholder" class="network-placeholder">
+        <div class="text-center color-fg-muted">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="currentColor" class="mb-3" style="opacity:.3"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm-1-5h2v2h-2zm0-8h2v6h-2z"/></svg>
+          <p class="f5">Create a project and generate a response<br/>to visualize the term network.</p>
+        </div>
+      </div>
+      <!-- Tooltip -->
+      <div id="tooltip" class="tooltip-box color-bg-default border color-border-default rounded-2 px-2 py-1 f6 color-fg-default" style="display:none;"></div>
+    </div>
+
+    <!-- Generate button bar -->
+    <div class="generate-bar px-4 py-3 border-top color-border-default color-bg-subtle d-flex flex-items-center gap-3">
+      <div id="active-project-badge" class="Label Label--secondary flex-shrink-0" style="display:none;"></div>
+      <span id="generate-status" class="color-fg-muted f6 flex-1"></span>
+      <button id="btn-generate" class="btn btn-primary" disabled>
+        <svg class="octicon mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M9.504.43a1.516 1.516 0 0 1 2.437 1.713L10.415 5.5h2.123c1.57 0 2.346 1.909 1.22 3.004l-7.34 7.142a1.249 1.249 0 0 1-.871.354H4.733a1.249 1.249 0 0 1-1.237-1.369l.46-3.813H2.514A1.516 1.516 0 0 1 1.297 8.5L9.504.43Z"/></svg>
+        Generate New
+      </button>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT COLUMN: Settings ===== -->
+  <aside class="col-right color-bg-subtle border-left color-border-default d-flex flex-column">
+    <div class="col-header px-3 py-2 border-bottom color-border-default">
+      <span class="text-bold color-fg-default f5">Parameters</span>
+    </div>
+    <div class="flex-1 overflow-y-auto px-3 py-3">
+
+      <!-- API Key -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">Claude API Key</label>
+        <input id="api-key" type="password" class="form-control input-sm width-full" placeholder="sk-ant-…" autocomplete="off" />
+        <p class="note mt-1 color-fg-muted f6">Stored in browser only, never sent to our servers.</p>
+      </div>
+
+      <!-- Model -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">Model</label>
+        <select id="model-select" class="form-select select-sm width-full">
+          <option value="claude-opus-4-6">claude-opus-4-6 (most capable)</option>
+          <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6</option>
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fast)</option>
+        </select>
+      </div>
+
+      <!-- Max Tokens -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">
+          Max Tokens <span id="max-tokens-val" class="Label Label--secondary ml-1">1024</span>
+        </label>
+        <input id="max-tokens" type="range" min="128" max="4096" step="128" value="1024" class="width-full" />
+        <div class="d-flex flex-justify-between f6 color-fg-muted"><span>128</span><span>4096</span></div>
+      </div>
+
+      <!-- Temperature -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">
+          Temperature <span id="temp-val" class="Label Label--secondary ml-1">1.0</span>
+        </label>
+        <input id="temperature" type="range" min="0" max="1" step="0.05" value="1.0" class="width-full" />
+        <div class="d-flex flex-justify-between f6 color-fg-muted"><span>0</span><span>1</span></div>
+      </div>
+
+      <!-- System prompt -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">System Prompt</label>
+        <textarea id="system-prompt" class="form-control input-sm width-full" rows="3" placeholder="Optional system instructions…"></textarea>
+      </div>
+
+      <hr class="color-border-default my-3" />
+
+      <!-- User Prompt -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">Prompt</label>
+        <textarea id="user-prompt" class="form-control input-sm width-full" rows="6" placeholder="Enter your prompt here…"></textarea>
+      </div>
+
+      <!-- Keywords slider -->
+      <div class="form-group mb-3">
+        <label class="form-label f6 text-bold color-fg-default d-block mb-1">
+          Keywords to extract <span id="keywords-val" class="Label Label--secondary ml-1">15</span>
+        </label>
+        <input id="keywords-count" type="range" min="5" max="40" step="1" value="15" class="width-full" />
+      </div>
+    </div>
+
+    <!-- Last response preview -->
+    <div class="border-top color-border-default">
+      <div class="px-3 py-2 d-flex flex-items-center flex-justify-between">
+        <span class="f6 text-bold color-fg-default">Last Response</span>
+        <button id="btn-copy-response" class="btn btn-sm" style="display:none">Copy</button>
+      </div>
+      <div id="response-preview" class="px-3 pb-3 f6 color-fg-muted response-preview"></div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- New Project Dialog -->
+<div id="modal-overlay" class="modal-overlay" style="display:none">
+  <div class="Box Box--overlay color-bg-default rounded-3" style="width:340px">
+    <div class="Box-header">
+      <h3 class="Box-title">New Project</h3>
+    </div>
+    <div class="Box-body">
+      <label class="form-label f6 d-block mb-1">Project name</label>
+      <input id="new-project-name" type="text" class="form-control width-full" placeholder="e.g. Digital Humanities Study" />
+    </div>
+    <div class="Box-footer d-flex flex-justify-end gap-2">
+      <button id="btn-modal-cancel" class="btn">Cancel</button>
+      <button id="btn-modal-create" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
