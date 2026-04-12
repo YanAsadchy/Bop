@@ -221,8 +221,8 @@ input[type="range"] {
   100% { background: transparent; }
 }
 
-/* ===== Trash button in project header ===== */
-.project-delete-btn {
+/* ===== Action buttons (export + trash) in project header ===== */
+.project-action-btn {
   flex-shrink: 0;
   display: none;
   padding: 2px 4px;
@@ -233,12 +233,16 @@ input[type="range"] {
   color: var(--fgColor-muted, #636e7b);
   line-height: 1;
 }
-.project-delete-btn:hover {
+.project-action-btn:hover {
+  color: var(--fgColor-accent, #0969da);
+  background: var(--bgColor-accent-muted, #ddf4ff);
+}
+.project-action-btn.project-delete-btn:hover {
   color: var(--fgColor-danger, #cf222e);
   background: var(--bgColor-danger-muted, #ffebe9);
 }
-.project-item-header:hover .project-delete-btn,
-.project-item-header.active .project-delete-btn {
+.project-item-header:hover .project-action-btn,
+.project-item-header.active .project-action-btn {
   display: flex;
 }
 

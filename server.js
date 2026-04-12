@@ -265,6 +265,42 @@ app.delete('/api/projects/:projectId', async (req, res) => {
   }
 });
 
+// Export project as CSV: one row per (generation × term)
+app.get('/api/projects/:projectId/export', async (req, res) => {
+  try {
+    const pid = parseInt(req.params.projectId);
+
+    const pRes = await conn.query(`MATCH (p:Project) WHERE p.id = ${pid} RETURN p.name`);
+    const pRows = await pRes.getAll();
+    if (!pRows.length) return res.status(404).json({ error: 'Project not found' });
+    const projectName = pRows[0]['p.name'];
+
+    const rows = await (await conn.query(
+      `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[m:MENTIONS]->(t:Term)
+       WHERE p.id = ${pid}
+       RETURN g.id AS gen_id, g.created_at AS created_at, g.model AS model,
+              g.prompt AS prompt, g.response AS response,
+              t.text AS term, m.weight AS weight
+       ORDER BY g.created_at ASC, m.weight DESC`
+    )).getAll();
+
+    const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = 'generation_id,created_at,model,prompt,response,term,weight\n';
+    const body = rows.map(r =>
+      [r.gen_id, r.created_at, r.model, r.prompt, r.response, r.term, r.weight]
+        .map(escape).join(',')
+    ).join('\n');
+
+    const safeName = projectName.replace(/[^a-z0-9_-]/gi, '_');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}_export.csv"`);
+    res.send(header + body);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Health
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
