@@ -115,7 +115,7 @@ User edits prompt → clicks "Generate New"
 
 A scrollable list of named projects. Each project row shows the project name and, on hover, two icon buttons:
 
-- **Download** (`download`) — triggers a CSV export of all generations and extracted terms for that project.
+- **Download** (`download`) — triggers a CSV export of all generations for that project. Each row is one generation; extracted terms appear as a semicolon-separated list in the `terms` column, ordered by relevance weight.
 - **Delete** (`delete`) — opens a confirmation modal before permanently removing the project and its generations.
 
 Clicking a project name selects it as the active context (highlighted in blue) and loads its term network into the centre column. A chevron button expands the project to reveal a scrollable list of past generations, each labelled with a truncated version of its prompt.

@@ -265,7 +265,7 @@ app.delete('/api/projects/:projectId', async (req, res) => {
   }
 });
 
-// Export project as CSV: one row per (generation × term)
+// Export project as CSV: one row per generation, terms as semicolon-separated list
 app.get('/api/projects/:projectId/export', async (req, res) => {
   try {
     const pid = parseInt(req.params.projectId);
@@ -275,21 +275,37 @@ app.get('/api/projects/:projectId/export', async (req, res) => {
     if (!pRows.length) return res.status(404).json({ error: 'Project not found' });
     const projectName = pRows[0]['p.name'];
 
-    const rows = await (await conn.query(
-      `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[m:MENTIONS]->(t:Term)
+    // Fetch generations ordered by date
+    const genRows = await (await conn.query(
+      `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)
        WHERE p.id = ${pid}
        RETURN g.id AS gen_id, g.created_at AS created_at, g.model AS model,
-              g.prompt AS prompt, g.response AS response,
-              t.text AS term, m.weight AS weight
-       ORDER BY g.created_at ASC, m.weight DESC`
+              g.prompt AS prompt, g.response AS response
+       ORDER BY g.created_at ASC`
     )).getAll();
 
+    // Fetch all terms for this project's generations, ordered by weight desc
+    const termRows = await (await conn.query(
+      `MATCH (p:Project)-[:HAS_GENERATION]->(g:Generation)-[m:MENTIONS]->(t:Term)
+       WHERE p.id = ${pid}
+       RETURN g.id AS gen_id, t.text AS term, m.weight AS weight
+       ORDER BY g.id ASC, m.weight DESC`
+    )).getAll();
+
+    // Group terms by generation id
+    const termsByGen = {};
+    for (const r of termRows) {
+      if (!termsByGen[r.gen_id]) termsByGen[r.gen_id] = [];
+      termsByGen[r.gen_id].push(r.term);
+    }
+
     const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const header = 'generation_id,created_at,model,prompt,response,term,weight\n';
-    const body = rows.map(r =>
-      [r.gen_id, r.created_at, r.model, r.prompt, r.response, r.term, r.weight]
-        .map(escape).join(',')
-    ).join('\n');
+    const header = 'generation_id,created_at,model,prompt,response,terms\n';
+    const body = genRows.map(r => {
+      const terms = (termsByGen[r.gen_id] || []).join('; ');
+      return [r.gen_id, r.created_at, r.model, r.prompt, r.response, terms]
+        .map(escape).join(',');
+    }).join('\n');
 
     const safeName = projectName.replace(/[^a-z0-9_-]/gi, '_');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
